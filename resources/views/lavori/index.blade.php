@@ -69,7 +69,7 @@
                     </thead>
                     <tbody>
                         @foreach($lavori as $lavoro)
-                        <tr>
+                        <tr style="cursor: pointer;" onclick="window.location='{{ route('lavori.show', $lavoro) }}'" onmousedown="if(event.target.tagName === 'BUTTON' || event.target.tagName === 'A' || event.target.tagName === 'I' || event.target.closest('form')) event.stopPropagation();">
                             <td>
                                 <strong>{{ \Carbon\Carbon::parse($lavoro->data_lavoro)->format('d/m/Y') }}</strong>
                                 <br>

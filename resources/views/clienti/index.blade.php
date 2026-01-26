@@ -51,7 +51,7 @@
                     </thead>
                     <tbody>
                         @foreach($clienti as $cliente)
-                        <tr>
+                        <tr style="cursor: pointer;" onclick="window.location='{{ route('clienti.show', $cliente) }}'" onmousedown="if(event.target.tagName === 'BUTTON' || event.target.tagName === 'A' || event.target.tagName === 'I' || event.target.closest('form')) event.stopPropagation();">
                             <td>
                                 <strong>{{ $cliente->nome }}</strong>
                             </td>

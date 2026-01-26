@@ -140,9 +140,9 @@
                     </thead>
                     <tbody>
                         @foreach($pagamenti as $pagamento)
-                        <tr class="{{ $pagamento->data_scadenza < now() && $pagamento->stato == 'in_sospeso' ? 'table-danger' : '' }}">
+                        <tr class="{{ $pagamento->data_scadenza < now() && $pagamento->stato == 'in_sospeso' ? 'table-danger' : '' }}" style="cursor: pointer;" onclick="window.location='{{ route('pagamenti.show', $pagamento) }}'" onmousedown="if(event.target.tagName === 'BUTTON' || event.target.tagName === 'A' || event.target.tagName === 'I' || event.target.closest('form')) event.stopPropagation();">
                             <td>
-                                <a href="{{ route('clienti.show', $pagamento->cliente) }}">
+                                <a href="{{ route('clienti.show', $pagamento->cliente) }}" onclick="event.stopPropagation();">
                                     {{ $pagamento->cliente->nome }}
                                 </a>
                             </td>
