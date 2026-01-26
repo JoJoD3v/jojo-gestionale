@@ -1,0 +1,270 @@
+/* Import MDB UI Kit */
+@import 'mdb-ui-kit/css/mdb.min.css';
+
+/* Import Bootstrap Icons */
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+/* Custom styles */
+:root {
+    --mdb-primary: #1976d2;
+    --mdb-secondary: #424242;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Sidebar styles */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 250px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding-top: 60px;
+    transition: all 0.3s;
+    z-index: 1000;
+}
+
+.sidebar.collapsed {
+    width: 80px;
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.sidebar .nav-link i {
+    font-size: 1.3rem;
+    min-width: 40px;
+}
+
+.sidebar.collapsed .nav-link span {
+    display: none;
+}
+
+/* Main content with sidebar */
+.main-content {
+    margin-left: 250px;
+    padding-top: 60px;
+    transition: all 0.3s;
+}
+
+.main-content.expanded {
+    margin-left: 80px;
+}
+
+/* Topbar */
+.topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+}
+
+/* Status badges */
+.badge-in-sospeso {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.badge-pagato {
+    background-color: #28a745;
+}
+
+.badge-annullato {
+    background-color: #dc3545;
+}
+
+.badge-da-fare {
+    background-color: #6c757d;
+}
+
+.badge-in-corso {
+    background-color: #007bff;
+}
+
+.badge-completato {
+    background-color: #28a745;
+}
+
+/* Form styles */
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #495057;
+}
+
+.form-control,
+.form-select {
+    border: 2px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.625rem 0.875rem;
+    font-size: 1rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #dc3545;
+}
+
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+textarea.form-control {
+    min-height: 100px;
+}
+
+/* Card styles */
+.stat-card {
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+/* FullCalendar Styles */
+.fc {
+    max-width: 100%;
+}
+
+.fc-event {
+    cursor: pointer;
+    border: none;
+    padding: 2px 5px;
+}
+
+.fc-event-lavoro {
+    background-color: #2196F3;
+    border-left: 3px solid #1976D2;
+}
+
+.fc-event-pagamento-in-sospeso {
+    background-color: #FFC107;
+    color: #000;
+    border-left: 3px solid #FFA000;
+}
+
+.fc-event-pagamento-pagato {
+    background-color: #4CAF50;
+    border-left: 3px solid #388E3C;
+}
+
+.fc-event-pagamento-annullato {
+    background-color: #F44336;
+    border-left: 3px solid #D32F2F;
+}
+
+/* Task Cards stile Trello */
+.task-card {
+    background: white;
+    border-radius: 8px;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+    border-left: 4px solid;
+}
+
+.task-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.task-card-sospeso {
+    border-left-color: #FFC107;
+    background: linear-gradient(to bottom, #FFFBF0 0%, white 100%);
+}
+
+.task-card-completato {
+    border-left-color: #4CAF50;
+    background: linear-gradient(to bottom, #F1F8F4 0%, white 100%);
+}
+
+.task-card-ritardo {
+    border-left-color: #F44336;
+    background: linear-gradient(to bottom, #FFF3F3 0%, white 100%);
+}
+
+.task-card-header {
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.task-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    color: #333;
+    flex: 1;
+}
+
+.task-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.task-card-body {
+    padding: 15px;
+}
+
+.task-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-card-footer {
+    padding: 15px;
+    border-top: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+}
