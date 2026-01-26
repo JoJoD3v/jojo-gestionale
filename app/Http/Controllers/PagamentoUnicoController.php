@@ -35,20 +35,23 @@ class PagamentoUnicoController extends Controller
             $query->where('data_scadenza', '<=', $request->data_fine);
         }
 
-        $pagamenti = $query->orderBy('data_scadenza', 'asc')->get();
-
-        // Calcola totali e conteggi
+        // Calcola totali e conteggi prima della paginazione
+        $tuttiPagamenti = $query->get();
+        
         $totali = [
-            'in_sospeso' => $pagamenti->where('stato', 'in_sospeso')->sum('importo'),
-            'pagato' => $pagamenti->where('stato', 'pagato')->sum('importo'),
-            'annullato' => $pagamenti->where('stato', 'annullato')->sum('importo'),
+            'in_sospeso' => $tuttiPagamenti->where('stato', 'in_sospeso')->sum('importo'),
+            'pagato' => $tuttiPagamenti->where('stato', 'pagato')->sum('importo'),
+            'annullato' => $tuttiPagamenti->where('stato', 'annullato')->sum('importo'),
         ];
 
         $conteggi = [
-            'in_sospeso' => $pagamenti->where('stato', 'in_sospeso')->count(),
-            'pagato' => $pagamenti->where('stato', 'pagato')->count(),
-            'annullato' => $pagamenti->where('stato', 'annullato')->count(),
+            'in_sospeso' => $tuttiPagamenti->where('stato', 'in_sospeso')->count(),
+            'pagato' => $tuttiPagamenti->where('stato', 'pagato')->count(),
+            'annullato' => $tuttiPagamenti->where('stato', 'annullato')->count(),
         ];
+
+        // Pagina i risultati
+        $pagamenti = $query->orderBy('data_scadenza', 'asc')->paginate(15)->withQueryString();
 
         // Clienti per filtro
         $clienti = Cliente::orderBy('nome')->get();
