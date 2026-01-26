@@ -10,6 +10,8 @@ class Task extends Model
 {
     use SoftDeletes;
 
+    protected $table = 'compiti_lavoro';
+
     protected $fillable = [
         'nome',
         'lavoro_id',
