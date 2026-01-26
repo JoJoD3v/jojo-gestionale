@@ -29,9 +29,11 @@
     </div>
 </div>
 
-<!-- Tasks Board stile Trello -->
-<div class="row">
-    @forelse($tasks as $task)
+<!-- Tasks Non Completati -->
+@if($tasksNonCompletati->count() > 0)
+<h4 class="mb-3"><i class="bi bi-clock-history me-2"></i>Tasks da Completare</h4>
+<div class="row mb-5">
+    @foreach($tasksNonCompletati as $task)
         <div class="col-md-4 col-lg-3 mb-4">
             <div class="task-card {{ $task->isInRitardo() ? 'task-card-ritardo' : ($task->status == 'completato' ? 'task-card-completato' : 'task-card-sospeso') }}">
                 <div class="task-card-header">
@@ -96,12 +98,90 @@
                 @endif
             </div>
         </div>
-    @empty
-        <div class="col-12">
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>Nessun task trovato. Crea il tuo primo task!
+    @endforeach
+</div>
+@else
+<div class="alert alert-info mb-5">
+    <i class="bi bi-info-circle me-2"></i>Nessun task da completare. Ottimo lavoro!
+</div>
+@endif
+
+<!-- Tasks Completati -->
+@if($tasksCompletati->count() > 0)
+<h4 class="mb-3"><i class="bi bi-check-circle me-2"></i>Tasks Completati</h4>
+<div class="row">
+    @foreach($tasksCompletati as $task)
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="task-card {{ $task->isInRitardo() ? 'task-card-ritardo' : ($task->status == 'completato' ? 'task-card-completato' : 'task-card-sospeso') }}">
+                <div class="task-card-header">
+                    <h5 class="task-title">{{ $task->nome }}</h5>
+                    <div class="task-actions">
+                        <a href="{{ route('tasks.edit', $task) }}" 
+                           class="btn btn-warning btn-sm me-1" 
+                           title="Modifica">
+                            <i class="bi bi-pencil-fill"></i>
+                        </a>
+                        <form action="{{ route('tasks.destroy', $task) }}" 
+                              method="POST" 
+                              class="d-inline"
+                              onsubmit="return confirm('Sei sicuro di voler eliminare questo task?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm" title="Elimina">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="task-card-body">
+                    <div class="task-info">
+                        <small class="text-muted">
+                            <i class="bi bi-briefcase"></i> {{ $task->lavoro->descrizione }}
+                        </small>
+                    </div>
+                    <div class="task-info mt-2">
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ $task->lavoro->cliente->nome ?? 'N/A' }}
+                        </small>
+                    </div>
+                    <div class="task-info mt-2">
+                        <small class="text-muted">
+                            <i class="bi bi-calendar"></i> Scadenza: {{ $task->scadenza->format('d/m/Y') }}
+                        </small>
+                    </div>
+                    
+                    <div class="mt-3">
+                        @if($task->status == 'in_sospeso')
+                            <span class="badge bg-warning text-dark">In Sospeso</span>
+                            @if($task->isInRitardo())
+                                <span class="badge bg-danger ms-1">In Ritardo</span>
+                            @endif
+                        @else
+                            <span class="badge bg-success">Completato</span>
+                        @endif
+                    </div>
+                </div>
+                
+                @if($task->status == 'in_sospeso')
+                    <div class="task-card-footer">
+                        <form action="{{ route('tasks.completa', $task) }}" method="POST">
+                            @csrf
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="bi bi-check-lg me-1"></i>Segna Completato
+                            </button>
+                        </form>
+                    </div>
+                @endif
             </div>
         </div>
-    @endforelse
+    @endforeach
 </div>
+@endif
+
+@if($tasksNonCompletati->count() == 0 && $tasksCompletati->count() == 0)
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>Nessun task trovato. Crea il tuo primo task!
+</div>
+@endif
 @endsection

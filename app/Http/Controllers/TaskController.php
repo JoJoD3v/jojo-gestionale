@@ -16,14 +16,22 @@ class TaskController extends Controller
         $lavori = Lavoro::orderBy('descrizione')->get();
         $lavoroId = $request->get('lavoro_id');
         
-        $tasks = Task::with('lavoro.cliente')
+        $query = Task::with('lavoro.cliente')
             ->when($lavoroId, function($query, $lavoroId) {
                 return $query->where('lavoro_id', $lavoroId);
-            })
+            });
+        
+        $tasksNonCompletati = (clone $query)
+            ->where('status', 'in_sospeso')
             ->orderBy('scadenza')
             ->get();
+            
+        $tasksCompletati = (clone $query)
+            ->where('status', 'completato')
+            ->orderBy('scadenza', 'desc')
+            ->get();
 
-        return view('tasks.index', compact('tasks', 'lavori', 'lavoroId'));
+        return view('tasks.index', compact('tasksNonCompletati', 'tasksCompletati', 'lavori', 'lavoroId'));
     }
 
     /**

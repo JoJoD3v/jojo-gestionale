@@ -71,6 +71,45 @@
     </div>
 </div>
 
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Azioni Rapide</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ route('clienti.create') }}" class="btn btn-outline-primary btn-lg w-100">
+                            <i class="bi bi-person-plus d-block mb-2" style="font-size: 2rem;"></i>
+                            Nuovo Cliente
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ route('lavori.create') }}" class="btn btn-outline-info btn-lg w-100">
+                            <i class="bi bi-briefcase-fill d-block mb-2" style="font-size: 2rem;"></i>
+                            Nuovo Lavoro
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ route('pagamenti.create') }}" class="btn btn-outline-success btn-lg w-100">
+                            <i class="bi bi-cash-coin d-block mb-2" style="font-size: 2rem;"></i>
+                            Nuovo Pagamento
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ route('calendario.index') }}" class="btn btn-outline-warning btn-lg w-100">
+                            <i class="bi bi-calendar3 d-block mb-2" style="font-size: 2rem;"></i>
+                            Vai al Calendario
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <!-- Prossimi Lavori -->
     <div class="col-md-6 mb-4">
@@ -170,45 +209,6 @@
                         </a>
                     </div>
                 @endif
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Quick Actions -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header bg-dark text-white">
-                <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Azioni Rapide</h5>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-3 mb-3">
-                        <a href="{{ route('clienti.create') }}" class="btn btn-outline-primary btn-lg w-100">
-                            <i class="bi bi-person-plus d-block mb-2" style="font-size: 2rem;"></i>
-                            Nuovo Cliente
-                        </a>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <a href="{{ route('lavori.create') }}" class="btn btn-outline-info btn-lg w-100">
-                            <i class="bi bi-briefcase-fill d-block mb-2" style="font-size: 2rem;"></i>
-                            Nuovo Lavoro
-                        </a>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <a href="{{ route('pagamenti.create') }}" class="btn btn-outline-success btn-lg w-100">
-                            <i class="bi bi-cash-coin d-block mb-2" style="font-size: 2rem;"></i>
-                            Nuovo Pagamento
-                        </a>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <a href="{{ route('calendario.index') }}" class="btn btn-outline-warning btn-lg w-100">
-                            <i class="bi bi-calendar3 d-block mb-2" style="font-size: 2rem;"></i>
-                            Vai al Calendario
-                        </a>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
