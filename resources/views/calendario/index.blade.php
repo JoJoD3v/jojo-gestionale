@@ -124,7 +124,9 @@
             },
             eventClick: function(info) {
                 info.jsEvent.preventDefault();
-                mostraDettagliGiorno(info.event.startStr);
+                // Estrae solo la parte YYYY-MM-DD dalla data
+                const dataEvento = info.event.start ? info.event.start.toISOString().split('T')[0] : info.event.startStr.split('T')[0];
+                mostraDettagliGiorno(dataEvento);
             },
             height: 'auto'
         });
@@ -136,8 +138,11 @@
             const modalBody = document.getElementById('modalDettagliGiornoBody');
             const modalTitle = document.getElementById('modalDettagliGiornoTitle');
             
+            // Estrae solo YYYY-MM-DD dalla data se contiene timestamp
+            const dataClean = data.split('T')[0];
+            
             // Formatta la data
-            const dataObj = new Date(data + 'T00:00:00');
+            const dataObj = new Date(dataClean + 'T00:00:00');
             const dataFormattata = dataObj.toLocaleDateString('it-IT', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -158,8 +163,8 @@
             
             modal.show();
             
-            // Carica i dettagli
-            fetch('{{ route('calendario.dettagli-giorno') }}?data=' + data)
+            // Carica i dettagli usando solo la data pulita
+            fetch('{{ route('calendario.dettagli-giorno') }}?data=' + dataClean)
                 .then(response => response.json())
                 .then(data => {
                     let html = '';

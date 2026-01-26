@@ -101,64 +101,91 @@ class CalendarioController extends Controller
      */
     public function getDettagliGiorno(Request $request)
     {
-        $data = Carbon::parse($request->input('data'));
+        try {
+            $dataInput = $request->input('data');
+            
+            // Pulisce la data rimuovendo eventuali timestamp o timezone
+            $dataClean = explode('T', $dataInput)[0];
+            $data = Carbon::createFromFormat('Y-m-d', $dataClean)->startOfDay();
 
-        $lavori = Lavoro::with('cliente')
-            ->whereDate('data_lavoro', $data)
-            ->get()
-            ->map(function($lavoro) {
-                return [
-                    'id' => $lavoro->id,
-                    'cliente' => [
-                        'nome' => $lavoro->cliente->nome,
-                    ],
-                    'descrizione' => $lavoro->descrizione,
-                    'stato' => $lavoro->stato,
-                    'stato_label' => ucfirst(str_replace('_', ' ', $lavoro->stato)),
-                ];
-            });
-
-        $pagamenti = Pagamento::with('cliente')
-            ->whereDate('data_scadenza', $data)
-            ->get()
-            ->map(function($pagamento) {
-                return [
-                    'id' => $pagamento->id,
-                    'cliente' => [
-                        'nome' => $pagamento->cliente->nome,
-                    ],
-                    'tipo_lavoro' => $pagamento->tipo_lavoro,
-                    'importo' => $pagamento->importo,
-                    'importo_formattato' => number_format($pagamento->importo, 2, ',', '.'),
-                    'stato' => $pagamento->stato,
-                    'stato_label' => ucfirst(str_replace('_', ' ', $pagamento->stato)),
-                ];
-            });
-
-        $tasks = Task::with('lavoro.cliente')
-            ->whereDate('scadenza', $data)
-            ->get()
-            ->map(function($task) {
-                return [
-                    'id' => $task->id,
-                    'nome' => $task->nome,
-                    'lavoro' => [
-                        'descrizione' => $task->lavoro->descrizione,
+            $lavori = Lavoro::with('cliente')
+                ->whereDate('data_lavoro', $data)
+                ->get()
+                ->filter(function($lavoro) {
+                    return $lavoro->cliente !== null;
+                })
+                ->map(function($lavoro) {
+                    return [
+                        'id' => $lavoro->id,
                         'cliente' => [
-                            'nome' => $task->lavoro->cliente->nome ?? 'N/A',
+                            'nome' => $lavoro->cliente->nome,
                         ],
-                    ],
-                    'status' => $task->status,
-                    'status_label' => ucfirst(str_replace('_', ' ', $task->status)),
-                    'in_ritardo' => $task->isInRitardo(),
-                ];
-            });
+                        'descrizione' => $lavoro->descrizione,
+                        'stato' => $lavoro->stato,
+                        'stato_label' => ucfirst(str_replace('_', ' ', $lavoro->stato)),
+                    ];
+                })
+                ->values();
 
-        return response()->json([
-            'lavori' => $lavori,
-            'pagamenti' => $pagamenti,
-            'tasks' => $tasks,
-        ]);
+            $pagamenti = Pagamento::with('cliente')
+                ->whereDate('data_scadenza', $data)
+                ->get()
+                ->filter(function($pagamento) {
+                    return $pagamento->cliente !== null;
+                })
+                ->map(function($pagamento) {
+                    return [
+                        'id' => $pagamento->id,
+                        'cliente' => [
+                            'nome' => $pagamento->cliente->nome,
+                        ],
+                        'tipo_lavoro' => $pagamento->tipo_lavoro,
+                        'importo' => $pagamento->importo,
+                        'importo_formattato' => number_format($pagamento->importo, 2, ',', '.'),
+                        'stato' => $pagamento->stato,
+                        'stato_label' => ucfirst(str_replace('_', ' ', $pagamento->stato)),
+                    ];
+                })
+                ->values();
+
+            $tasks = Task::with('lavoro.cliente')
+                ->whereDate('scadenza', $data)
+                ->get()
+                ->filter(function($task) {
+                    return $task->lavoro !== null && $task->lavoro->cliente !== null;
+                })
+                ->map(function($task) {
+                    return [
+                        'id' => $task->id,
+                        'nome' => $task->nome,
+                        'lavoro' => [
+                            'descrizione' => $task->lavoro->descrizione,
+                            'cliente' => [
+                                'nome' => $task->lavoro->cliente->nome ?? 'N/A',
+                            ],
+                        ],
+                        'status' => $task->status,
+                        'status_label' => ucfirst(str_replace('_', ' ', $task->status)),
+                        'in_ritardo' => $task->isInRitardo(),
+                    ];
+                })
+                ->values();
+
+            return response()->json([
+                'lavori' => $lavori,
+                'pagamenti' => $pagamenti,
+                'tasks' => $tasks,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Errore nel caricamento dettagli giorno: ' . $e->getMessage());
+            
+            return response()->json([
+                'lavori' => [],
+                'pagamenti' => [],
+                'tasks' => [],
+                'error' => 'Si è verificato un errore nel caricamento dei dati.'
+            ], 200);
+        }
     }
 }
 
