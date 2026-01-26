@@ -15,6 +15,14 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
+    <!-- Favicon -->
+    @if (file_exists(public_path('images/favicon.png')))
+        <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/favicon.png') }}">
+    @elseif (file_exists(public_path('images/favicon.ico')))
+        <link rel="icon" href="{{ asset('images/favicon.ico') }}">
+    @endif
+
     @stack('styles')
 </head>
 <body>
@@ -27,7 +35,12 @@
             <i class="bi bi-list" style="font-size: 1.5rem;"></i>
         </button>
         
-        <div class="ms-3">
+        <div class="ms-3 d-flex align-items-center">
+            @if (file_exists(public_path('images/favicon.png')))
+                <img src="{{ asset('images/favicon.png') }}" alt="{{ config('app.name', 'Gestionale') }}" style="height:32px; width:auto; object-fit:contain;" class="me-2">
+            @elseif (file_exists(public_path('images/favicon.ico')))
+                <img src="{{ asset('images/favicon.ico') }}" alt="{{ config('app.name', 'Gestionale') }}" style="height:32px; width:auto; object-fit:contain;" class="me-2">
+            @endif
             <strong>{{ config('app.name', 'Gestionale') }}</strong>
         </div>
 

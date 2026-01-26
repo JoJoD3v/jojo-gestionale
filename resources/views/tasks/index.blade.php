@@ -13,10 +13,10 @@
 <!-- Filtro per Lavoro -->
 <div class="card mb-4">
     <div class="card-body">
-        <form method="GET" action="{{ route('tasks.index') }}" class="row g-3">
-            <div class="col-md-10">
+        <form method="GET" action="{{ route('tasks.index') }}" class="row g-3" id="filterForm">
+            <div class="col-md-12">
                 <label for="lavoro_id" class="form-label">Filtra per Lavoro</label>
-                <select id="lavoro_id" name="lavoro_id" class="form-select">
+                <select id="lavoro_id" name="lavoro_id" class="form-select" onchange="document.getElementById('filterForm').submit()">
                     <option value="">Tutti i lavori</option>
                     @foreach($lavori as $lavoro)
                         <option value="{{ $lavoro->id }}" {{ $lavoroId == $lavoro->id ? 'selected' : '' }}>
@@ -24,11 +24,6 @@
                         </option>
                     @endforeach
                 </select>
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-filter"></i> Filtra
-                </button>
             </div>
         </form>
     </div>
