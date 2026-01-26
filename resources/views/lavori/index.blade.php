@@ -82,15 +82,19 @@
                             </td>
                             <td>{{ Str::limit($lavoro->descrizione, 60) }}</td>
                             <td>
-                                <span class="badge badge-{{ $lavoro->stato }}">
-                                    @if($lavoro->stato == 'da_fare')
+                                @if($lavoro->stato == 'da_fare')
+                                    <span class="badge bg-warning text-dark">
                                         <i class="bi bi-circle"></i> Da Fare
-                                    @elseif($lavoro->stato == 'in_corso')
+                                    </span>
+                                @elseif($lavoro->stato == 'in_corso')
+                                    <span class="badge bg-info text-white">
                                         <i class="bi bi-arrow-repeat"></i> In Corso
-                                    @else
+                                    </span>
+                                @else
+                                    <span class="badge bg-success text-white">
                                         <i class="bi bi-check-circle"></i> Completato
-                                    @endif
-                                </span>
+                                    </span>
+                                @endif
                             </td>
                             <td class="text-center">
                                 <a href="{{ route('lavori.show', $lavoro) }}" 

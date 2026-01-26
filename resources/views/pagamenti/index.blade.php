@@ -142,9 +142,19 @@
                                 @endif
                             </td>
                             <td>
-                                <span class="badge badge-{{ $pagamento->stato }}">
-                                    {{ ucfirst(str_replace('_', ' ', $pagamento->stato)) }}
-                                </span>
+                                @if($pagamento->stato == 'in_sospeso')
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-clock-history"></i> In Sospeso
+                                    </span>
+                                @elseif($pagamento->stato == 'pagato')
+                                    <span class="badge bg-success text-white">
+                                        <i class="bi bi-check-circle"></i> Pagato
+                                    </span>
+                                @else
+                                    <span class="badge bg-danger text-white">
+                                        <i class="bi bi-x-circle"></i> Annullato
+                                    </span>
+                                @endif
                             </td>
                             <td class="text-center">
                                 @if($pagamento->stato == 'in_sospeso')
