@@ -164,10 +164,10 @@
                                 @endif
                             </td>
                             <td>
-                                <strong>{{ \Carbon\Carbon::parse($pagamento->data_scadenza)->format('d/m/Y') }}</strong>
+                                <strong>{{ \Carbon\Carbon::parse($pagamento->data_scadenza_calcolata ?? $pagamento->data_scadenza)->format('d/m/Y') }}</strong>
                                 <br>
-                                <small class="text-muted">{{ \Carbon\Carbon::parse($pagamento->data_scadenza)->locale('it')->diffForHumans() }}</small>
-                                @if($pagamento->data_scadenza < now() && $pagamento->stato == 'in_sospeso')
+                                <small class="text-muted">{{ \Carbon\Carbon::parse($pagamento->data_scadenza_calcolata ?? $pagamento->data_scadenza)->locale('it')->diffForHumans() }}</small>
+                                @if(($pagamento->data_scadenza_calcolata ?? $pagamento->data_scadenza) < now() && $pagamento->stato == 'in_sospeso')
                                     <br><small class="text-danger"><strong>Scaduto!</strong></small>
                                 @endif
                             </td>

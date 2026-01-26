@@ -111,9 +111,10 @@ class PagamentoController extends Controller
         $dataInizio = \Carbon\Carbon::parse($mese . '-01')->startOfMonth();
         $dataFine = $dataInizio->copy()->endOfMonth();
 
+        // Prendi TUTTI i pagamenti periodici (filtreremo in PHP)
         $query = Pagamento::with('cliente')
             ->whereIn('cadenza', ['mensile', 'trimestrale', 'semestrale'])
-            ->whereBetween('data_scadenza', [$dataInizio, $dataFine]);
+            ->where('data_scadenza', '<=', $dataFine); // Solo quelli già iniziati
 
         // Filtro per stato
         if ($request->filled('stato')) {
@@ -130,7 +131,45 @@ class PagamentoController extends Controller
             $query->where('cadenza', $request->cadenza);
         }
 
-        $pagamenti = $query->orderBy('data_scadenza', 'asc')->get();
+        $tuttiPagamenti = $query->get();
+
+        // Filtra i pagamenti che cadono nel mese visualizzato
+        $pagamenti = $tuttiPagamenti->filter(function($pagamento) use ($dataInizio, $dataFine) {
+            $dataScadenza = \Carbon\Carbon::parse($pagamento->data_scadenza);
+            
+            // Per ogni pagamento periodico, calcola se cade nel mese visualizzato
+            $interval = null;
+            switch($pagamento->cadenza) {
+                case 'mensile':
+                    $interval = 1;
+                    break;
+                case 'trimestrale':
+                    $interval = 3;
+                    break;
+                case 'semestrale':
+                    $interval = 6;
+                    break;
+            }
+
+            if (!$interval) {
+                return false;
+            }
+
+            // Calcola tutte le date ricorrenti fino al mese visualizzato
+            $dataCorrente = $dataScadenza->copy();
+            while ($dataCorrente <= $dataFine) {
+                // Se questa ricorrenza cade nel mese visualizzato
+                if ($dataCorrente >= $dataInizio && $dataCorrente <= $dataFine) {
+                    // Salva la data calcolata per mostrarla nella view
+                    $pagamento->data_scadenza_calcolata = $dataCorrente->copy();
+                    return true;
+                }
+                // Passa alla prossima ricorrenza
+                $dataCorrente->addMonths($interval);
+            }
+
+            return false;
+        })->sortBy('data_scadenza_calcolata')->values();
 
         // Calcola totali e conteggi per il mese corrente
         $totali = [
