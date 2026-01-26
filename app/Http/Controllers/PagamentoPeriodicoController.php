@@ -82,7 +82,12 @@ class PagamentoPeriodicoController extends Controller
                 $ricorrenzaDelMese = $primaRicorrenza->copy()->addMonths($mesiDallaPartenza);
                 
                 // Verifica che la ricorrenza cada effettivamente nel mese visualizzato
-                if ($ricorrenzaDelMese >= $dataInizio && $ricorrenzaDelMese <= $dataFine) {
+                // E che non superi la data_scadenza del contratto
+                $dataScadenzaContratto = Carbon::parse($pagamento->data_scadenza);
+                
+                if ($ricorrenzaDelMese >= $dataInizio && 
+                    $ricorrenzaDelMese <= $dataFine && 
+                    $ricorrenzaDelMese <= $dataScadenzaContratto) {
                     $pagamento->data_scadenza_calcolata = $ricorrenzaDelMese;
                     return true;
                 }
