@@ -38,6 +38,12 @@ Route::middleware('auth')->group(function () {
         ->name('pagamenti.marca-pagato');
     Route::post('pagamenti/{pagamento}/annulla', [PagamentoController::class, 'annulla'])
         ->name('pagamenti.annulla');
+    
+    // Pagamenti Unici
+    Route::get('pagamenti-unici', [PagamentoController::class, 'indexUnici'])->name('pagamenti.unici.index');
+    
+    // Pagamenti Periodici
+    Route::get('pagamenti-periodici', [PagamentoController::class, 'indexPeriodici'])->name('pagamenti.periodici.index');
 
     // Calendario
     Route::get('calendario', [CalendarioController::class, 'index'])->name('calendario.index');

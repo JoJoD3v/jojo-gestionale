@@ -57,10 +57,31 @@
                 <i class="bi bi-briefcase"></i>
                 <span>Lavori</span>
             </a>
-            <a class="nav-link {{ request()->routeIs('pagamenti.*') ? 'active' : '' }}" href="{{ route('pagamenti.index') }}">
-                <i class="bi bi-cash-coin"></i>
-                <span>Pagamenti</span>
-            </a>
+            
+            <!-- Pagamenti Submenu -->
+            <div class="nav-item">
+                <a class="nav-link {{ request()->routeIs('pagamenti.*') ? 'active' : '' }}" 
+                   href="#" 
+                   id="pagamentiToggle"
+                   onclick="toggleSubmenu(event)">
+                    <i class="bi bi-cash-coin"></i>
+                    <span>Pagamenti</span>
+                    <i class="bi bi-chevron-down ms-auto" id="pagamentiChevron"></i>
+                </a>
+                <div id="pagamentiSubmenu" style="display: {{ request()->routeIs('pagamenti.*') ? 'block' : 'none' }};">
+                    <nav class="nav flex-column ps-3">
+                        <a class="nav-link {{ request()->routeIs('pagamenti.unici.*') ? 'active' : '' }}" href="{{ route('pagamenti.unici.index') }}">
+                            <i class="bi bi-coin"></i>
+                            <span>Pagamenti Unici</span>
+                        </a>
+                        <a class="nav-link {{ request()->routeIs('pagamenti.periodici.*') ? 'active' : '' }}" href="{{ route('pagamenti.periodici.index') }}">
+                            <i class="bi bi-arrow-repeat"></i>
+                            <span>Pagamenti Periodici</span>
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
             <a class="nav-link {{ request()->routeIs('calendario.*') ? 'active' : '' }}" href="{{ route('calendario.index') }}">
                 <i class="bi bi-calendar3"></i>
                 <span>Calendario</span>
@@ -111,5 +132,30 @@
     </div>
 
     @stack('scripts')
+    
+    <script>
+        function toggleSubmenu(event) {
+            event.preventDefault();
+            const submenu = document.getElementById('pagamentiSubmenu');
+            const chevron = document.getElementById('pagamentiChevron');
+            
+            if (submenu.style.display === 'none') {
+                submenu.style.display = 'block';
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                submenu.style.display = 'none';
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+        
+        // Imposta lo stato iniziale del chevron
+        document.addEventListener('DOMContentLoaded', function() {
+            const submenu = document.getElementById('pagamentiSubmenu');
+            const chevron = document.getElementById('pagamentiChevron');
+            if (submenu && submenu.style.display === 'block') {
+                chevron.style.transform = 'rotate(180deg)';
+            }
+        });
+    </script>
 </body>
 </html>

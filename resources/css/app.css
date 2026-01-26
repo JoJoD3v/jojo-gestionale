@@ -50,6 +50,45 @@ body {
     min-width: 40px;
 }
 
+/* Submenu styles */
+.sidebar .collapse .nav-link {
+    padding: 10px 20px 10px 30px;
+    font-size: 0.9rem;
+}
+
+.sidebar .collapse .nav-link i {
+    font-size: 1rem;
+    min-width: 30px;
+}
+
+.sidebar [data-bs-toggle="collapse"] i.ms-auto {
+    transition: transform 0.3s;
+}
+
+.sidebar [data-bs-toggle="collapse"][aria-expanded="true"] i.ms-auto {
+    transform: rotate(180deg);
+}
+
+.sidebar #pagamentiSubmenu .nav-link {
+    padding: 10px 20px 10px 30px;
+    font-size: 0.9rem;
+}
+
+.sidebar #pagamentiSubmenu .nav-link i {
+    font-size: 1rem;
+    min-width: 30px;
+}
+
+.sidebar #pagamentiChevron {
+    transition: transform 0.3s;
+    font-size: 0.9rem;
+}
+
+.sidebar #pagamentiSubmenu {
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+
 .sidebar.collapsed .nav-link span {
     display: none;
 }
