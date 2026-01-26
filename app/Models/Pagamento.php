@@ -40,6 +40,14 @@ class Pagamento extends Model
     }
 
     /**
+     * Relazione con le ricorrenze (per pagamenti periodici)
+     */
+    public function ricorrenze()
+    {
+        return $this->hasMany(PagamentoRicorrenza::class);
+    }
+
+    /**
      * Scope per filtrare per stato
      */
     public function scopePerStato(Builder $query, string $stato): Builder

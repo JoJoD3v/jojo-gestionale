@@ -169,11 +169,11 @@
                                 <small class="text-muted">Scadenza contratto: {{ \Carbon\Carbon::parse($pagamento->data_scadenza)->locale('it')->diffForHumans() }}</small>
                             </td>
                             <td>
-                                @if($pagamento->stato == 'in_sospeso')
+                                @if($pagamento->stato_ricorrenza == 'in_sospeso')
                                     <span class="badge bg-warning text-dark">
                                         <i class="bi bi-clock-history"></i> In Sospeso
                                     </span>
-                                @elseif($pagamento->stato == 'pagato')
+                                @elseif($pagamento->stato_ricorrenza == 'pagato')
                                     <span class="badge bg-success text-white">
                                         <i class="bi bi-check-circle"></i> Pagato
                                     </span>
@@ -184,17 +184,19 @@
                                 @endif
                             </td>
                             <td class="text-center">
-                                @if($pagamento->stato == 'in_sospeso')
-                                    <form action="{{ route('pagamenti.marca-pagato', $pagamento) }}" method="POST" class="d-inline">
+                                @if($pagamento->stato_ricorrenza == 'in_sospeso')
+                                    <form action="{{ route('pagamenti.periodici.marca-ricorrenza-pagata', $pagamento) }}" method="POST" class="d-inline">
                                         @csrf
+                                        <input type="hidden" name="data_ricorrenza" value="{{ $pagamento->data_scadenza_calcolata->format('Y-m-d') }}">
                                         <button type="submit" 
                                                 class="btn btn-sm btn-success" 
                                                 title="Segna come Pagato">
                                             <i class="bi bi-check-lg"></i>
                                         </button>
                                     </form>
-                                    <form action="{{ route('pagamenti.annulla', $pagamento) }}" method="POST" class="d-inline">
+                                    <form action="{{ route('pagamenti.periodici.annulla-ricorrenza', $pagamento) }}" method="POST" class="d-inline">
                                         @csrf
+                                        <input type="hidden" name="data_ricorrenza" value="{{ $pagamento->data_scadenza_calcolata->format('Y-m-d') }}">
                                         <button type="submit" 
                                                 class="btn btn-sm btn-danger" 
                                                 title="Annulla">

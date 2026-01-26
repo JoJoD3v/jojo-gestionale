@@ -20,7 +20,10 @@ class PagamentoPeriodicoController extends Controller
         $dataFine = $dataInizio->copy()->endOfMonth();
 
         // Prendi TUTTI i pagamenti periodici (filtreremo dopo)
-        $query = Pagamento::with('cliente')
+        $query = Pagamento::with(['cliente', 'ricorrenze' => function($q) use ($dataInizio, $dataFine) {
+            // Carica solo le ricorrenze del mese visualizzato
+            $q->whereBetween('data_ricorrenza', [$dataInizio, $dataFine]);
+        }])
             ->where('cadenza', 'periodico');
 
         // Filtro per stato
@@ -89,6 +92,16 @@ class PagamentoPeriodicoController extends Controller
                     $ricorrenzaDelMese <= $dataFine && 
                     $ricorrenzaDelMese <= $dataScadenzaContratto) {
                     $pagamento->data_scadenza_calcolata = $ricorrenzaDelMese;
+                    
+                    // Cerca se esiste già una ricorrenza per questa data
+                    $ricorrenza = $pagamento->ricorrenze->first(function($r) use ($ricorrenzaDelMese) {
+                        return $r->data_ricorrenza->format('Y-m-d') === $ricorrenzaDelMese->format('Y-m-d');
+                    });
+                    
+                    // Imposta lo stato della ricorrenza (default: in_sospeso)
+                    $pagamento->stato_ricorrenza = $ricorrenza ? $ricorrenza->stato : 'in_sospeso';
+                    $pagamento->ricorrenza_id = $ricorrenza ? $ricorrenza->id : null;
+                    
                     return true;
                 }
             }
@@ -98,15 +111,15 @@ class PagamentoPeriodicoController extends Controller
 
         // Calcola totali e conteggi per il mese corrente
         $totali = [
-            'in_sospeso' => $pagamenti->where('stato', 'in_sospeso')->sum('importo'),
-            'pagato' => $pagamenti->where('stato', 'pagato')->sum('importo'),
-            'annullato' => $pagamenti->where('stato', 'annullato')->sum('importo'),
+            'in_sospeso' => $pagamenti->where('stato_ricorrenza', 'in_sospeso')->sum('importo'),
+            'pagato' => $pagamenti->where('stato_ricorrenza', 'pagato')->sum('importo'),
+            'annullato' => $pagamenti->where('stato_ricorrenza', 'annullato')->sum('importo'),
         ];
 
         $conteggi = [
-            'in_sospeso' => $pagamenti->where('stato', 'in_sospeso')->count(),
-            'pagato' => $pagamenti->where('stato', 'pagato')->count(),
-            'annullato' => $pagamenti->where('stato', 'annullato')->count(),
+            'in_sospeso' => $pagamenti->where('stato_ricorrenza', 'in_sospeso')->count(),
+            'pagato' => $pagamenti->where('stato_ricorrenza', 'pagato')->count(),
+            'annullato' => $pagamenti->where('stato_ricorrenza', 'annullato')->count(),
         ];
 
         // Date per navigazione
@@ -127,5 +140,50 @@ class PagamentoPeriodicoController extends Controller
             'meseFormattato',
             'clienti'
         ));
+    }   
+
+    /**
+     * Marca una ricorrenza specifica come pagata
+     */
+    public function marcaRicorrenzaPagata(Request $request, Pagamento $pagamento)
+    {
+        $dataRicorrenza = Carbon::parse($request->data_ricorrenza);
+        
+        $ricorrenza = \App\Models\PagamentoRicorrenza::updateOrCreate(
+            [
+                'pagamento_id' => $pagamento->id,
+                'data_ricorrenza' => $dataRicorrenza,
+            ],
+            [
+                'stato' => 'pagato',
+                'data_pagamento' => now(),
+            ]
+        );
+
+        return redirect()
+            ->route('pagamenti.periodici.index', ['mese' => $dataRicorrenza->format('Y-m')])
+            ->with('success', 'Pagamento segnato come pagato per ' . $dataRicorrenza->locale('it')->isoFormat('MMMM YYYY'));
+    }
+
+    /**
+     * Annulla una ricorrenza specifica
+     */
+    public function annullaRicorrenza(Request $request, Pagamento $pagamento)
+    {
+        $dataRicorrenza = Carbon::parse($request->data_ricorrenza);
+        
+        $ricorrenza = \App\Models\PagamentoRicorrenza::updateOrCreate(
+            [
+                'pagamento_id' => $pagamento->id,
+                'data_ricorrenza' => $dataRicorrenza,
+            ],
+            [
+                'stato' => 'annullato',
+            ]
+        );
+
+        return redirect()
+            ->route('pagamenti.periodici.index', ['mese' => $dataRicorrenza->format('Y-m')])
+            ->with('success', 'Pagamento annullato per ' . $dataRicorrenza->locale('it')->isoFormat('MMMM YYYY'));
     }
 }

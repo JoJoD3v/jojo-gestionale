@@ -46,6 +46,10 @@ Route::middleware('auth')->group(function () {
     
     // Pagamenti Periodici
     Route::get('pagamenti-periodici', [PagamentoPeriodicoController::class, 'index'])->name('pagamenti.periodici.index');
+    Route::post('pagamenti-periodici/{pagamento}/marca-ricorrenza-pagata', [PagamentoPeriodicoController::class, 'marcaRicorrenzaPagata'])
+        ->name('pagamenti.periodici.marca-ricorrenza-pagata');
+    Route::post('pagamenti-periodici/{pagamento}/annulla-ricorrenza', [PagamentoPeriodicoController::class, 'annullaRicorrenza'])
+        ->name('pagamenti.periodici.annulla-ricorrenza');
 
     // Calendario
     Route::get('calendario', [CalendarioController::class, 'index'])->name('calendario.index');
