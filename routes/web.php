@@ -5,6 +5,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\LavoroController;
 use App\Http\Controllers\PagamentoController;
+use App\Http\Controllers\PagamentoUnicoController;
+use App\Http\Controllers\PagamentoPeriodicoController;
 use App\Http\Controllers\CalendarioController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -40,10 +42,10 @@ Route::middleware('auth')->group(function () {
         ->name('pagamenti.annulla');
     
     // Pagamenti Unici
-    Route::get('pagamenti-unici', [PagamentoController::class, 'indexUnici'])->name('pagamenti.unici.index');
+    Route::get('pagamenti-unici', [PagamentoUnicoController::class, 'index'])->name('pagamenti.unici.index');
     
     // Pagamenti Periodici
-    Route::get('pagamenti-periodici', [PagamentoController::class, 'indexPeriodici'])->name('pagamenti.periodici.index');
+    Route::get('pagamenti-periodici', [PagamentoPeriodicoController::class, 'index'])->name('pagamenti.periodici.index');
 
     // Calendario
     Route::get('calendario', [CalendarioController::class, 'index'])->name('calendario.index');

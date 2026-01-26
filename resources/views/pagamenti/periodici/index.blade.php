@@ -57,19 +57,19 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="cadenza" class="form-label">Cadenza</label>
-                        <select class="form-select" id="cadenza" name="cadenza">
+                        <label for="frequenza" class="form-label">Frequenza</label>
+                        <select class="form-select" id="frequenza" name="frequenza">
                             <option value="">Tutte</option>
-                            <option value="mensile" {{ request('cadenza') == 'mensile' ? 'selected' : '' }}>Mensile</option>
-                            <option value="trimestrale" {{ request('cadenza') == 'trimestrale' ? 'selected' : '' }}>Trimestrale</option>
-                            <option value="semestrale" {{ request('cadenza') == 'semestrale' ? 'selected' : '' }}>Semestrale</option>
+                            <option value="mensile" {{ request('frequenza') == 'mensile' ? 'selected' : '' }}>Mensile</option>
+                            <option value="trimestrale" {{ request('frequenza') == 'trimestrale' ? 'selected' : '' }}>Trimestrale</option>
+                            <option value="annuale" {{ request('frequenza') == 'annuale' ? 'selected' : '' }}>Annuale</option>
                         </select>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">
                             <i class="bi bi-filter"></i> Filtra
                         </button>
-                        @if(request()->hasAny(['cliente_id', 'stato', 'cadenza']))
+                        @if(request()->hasAny(['cliente_id', 'stato', 'frequenza']))
                             <a href="{{ route('pagamenti.periodici.index', ['mese' => $mese]) }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-x-lg"></i>
                             </a>
@@ -149,17 +149,17 @@
                             <td>{{ Str::limit($pagamento->tipo_lavoro, 40) }}</td>
                             <td><strong>€ {{ number_format($pagamento->importo, 2, ',', '.') }}</strong></td>
                             <td>
-                                @if($pagamento->cadenza == 'mensile')
+                                @if($pagamento->frequenza == 'mensile')
                                     <span class="badge bg-primary">
                                         <i class="bi bi-calendar-month"></i> Mensile
                                     </span>
-                                @elseif($pagamento->cadenza == 'trimestrale')
+                                @elseif($pagamento->frequenza == 'trimestrale')
                                     <span class="badge bg-info">
                                         <i class="bi bi-calendar3"></i> Trimestrale
                                     </span>
                                 @else
                                     <span class="badge bg-purple text-white">
-                                        <i class="bi bi-calendar-range"></i> Semestrale
+                                        <i class="bi bi-calendar-range"></i> Annuale
                                     </span>
                                 @endif
                             </td>
