@@ -38,8 +38,7 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/main.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.10/main.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet">
 <style>
     #calendar {
         max-width: 100%;
@@ -72,15 +71,31 @@
         background-color: #F44336;
         border-left: 3px solid #D32F2F;
     }
+
+    .fc-event-task-in-sospeso {
+        background-color: #FFC107;
+        color: #000;
+        border-left: 3px solid #FFA000;
+    }
+
+    .fc-event-task-completato {
+        background-color: #4CAF50;
+        border-left: 3px solid #388E3C;
+    }
+
+    .fc-event-task-ritardo {
+        background-color: #F44336 !important;
+        border-left: 3px solid #D32F2F !important;
+    }
 </style>
 @endpush
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
-        const calendar = new Calendar(calendarEl, {
-            plugins: [dayGridPlugin, interactionPlugin],
+        const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             locale: 'it',
             headerToolbar: {
@@ -187,6 +202,36 @@
                                                 <span class="badge badge-${pagamento.stato} ms-2">${pagamento.stato_label}</span>
                                             </div>
                                             <a href="/pagamenti/${pagamento.id}" class="btn btn-sm btn-info">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    // Tasks
+                    if (data.tasks && data.tasks.length > 0) {
+                        html += '<h6 class="mb-3 mt-4"><i class="bi bi-check2-square me-2"></i>Tasks</h6>';
+                        data.tasks.forEach(task => {
+                            const borderColor = task.in_ritardo ? 'danger' : (task.status == 'completato' ? 'success' : 'warning');
+                            html += `
+                                <div class="card mb-3 border-start border-${borderColor} border-3">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-1">${task.nome}</h6>
+                                                <p class="mb-1 text-muted small">
+                                                    <i class="bi bi-briefcase"></i> ${task.lavoro.descrizione}
+                                                </p>
+                                                <p class="mb-2 text-muted small">
+                                                    <i class="bi bi-person"></i> ${task.lavoro.cliente.nome}
+                                                </p>
+                                                <span class="badge bg-${borderColor}">${task.status_label}</span>
+                                                ${task.in_ritardo ? '<span class="badge bg-danger ms-1">In Ritardo</span>' : ''}
+                                            </div>
+                                            <a href="/tasks/${task.id}/edit" class="btn btn-sm btn-info">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                         </div>

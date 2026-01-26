@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Lavoro;
 use App\Models\Pagamento;
+use App\Models\Task;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -68,6 +69,30 @@ class CalendarioController extends Controller
             ];
         }
 
+        // Tasks
+        $tasks = Task::with('lavoro.cliente')
+            ->whereBetween('scadenza', [$start, $end])
+            ->get();
+
+        foreach ($tasks as $task) {
+            $className = 'fc-event-task-' . str_replace('_', '-', $task->status);
+            if ($task->isInRitardo()) {
+                $className .= ' fc-event-task-ritardo';
+            }
+
+            $eventi[] = [
+                'id' => 'task-' . $task->id,
+                'title' => '✓ ' . $task->nome,
+                'start' => $task->scadenza->format('Y-m-d'),
+                'className' => $className,
+                'extendedProps' => [
+                    'tipo' => 'task',
+                    'lavoro' => $task->lavoro->descrizione,
+                    'status' => $task->status,
+                ]
+            ];
+        }
+
         return response()->json($eventi);
     }
 
@@ -110,9 +135,29 @@ class CalendarioController extends Controller
                 ];
             });
 
+        $tasks = Task::with('lavoro.cliente')
+            ->whereDate('scadenza', $data)
+            ->get()
+            ->map(function($task) {
+                return [
+                    'id' => $task->id,
+                    'nome' => $task->nome,
+                    'lavoro' => [
+                        'descrizione' => $task->lavoro->descrizione,
+                        'cliente' => [
+                            'nome' => $task->lavoro->cliente->nome ?? 'N/A',
+                        ],
+                    ],
+                    'status' => $task->status,
+                    'status_label' => ucfirst(str_replace('_', ' ', $task->status)),
+                    'in_ritardo' => $task->isInRitardo(),
+                ];
+            });
+
         return response()->json([
             'lavori' => $lavori,
             'pagamenti' => $pagamenti,
+            'tasks' => $tasks,
         ]);
     }
 }
