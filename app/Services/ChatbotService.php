@@ -50,19 +50,26 @@ class ChatbotService
             ->orderBy('data_lavoro')
             ->get();
 
-        // --- Pagamenti oneshot in sospeso questo mese ---
-        $pagamentiSospeseMese = Pagamento::with('cliente')
+        // --- Tutti i pagamenti oneshot in sospeso (qualunque data) ---
+        $pagamentiInSospeso = Pagamento::with('cliente')
             ->where('cadenza', 'oneshot')
             ->where('stato', 'in_sospeso')
-            ->whereBetween('data_scadenza', [$meseCorrente, $fineCorrente])
-            ->whereNull('deleted_at')
+            ->orderBy('data_scadenza')
             ->get();
 
-        // --- Ricorrenze periodiche in sospeso questo mese ---
-        $ricorrenzeSospeseMese = PagamentoRicorrenza::with('pagamento.cliente')
+        $pagamentiScaduti    = $pagamentiInSospeso->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->lt($meseCorrente));
+        $pagamentiQuestoMese = $pagamentiInSospeso->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->between($meseCorrente, $fineCorrente));
+        $pagamentiFuturi     = $pagamentiInSospeso->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->gt($fineCorrente));
+
+        // --- Tutte le ricorrenze periodiche in sospeso (qualunque data) ---
+        $ricorrenzeInSospeso = PagamentoRicorrenza::with('pagamento.cliente')
             ->where('stato', 'in_sospeso')
-            ->whereBetween('data_ricorrenza', [$meseCorrente, $fineCorrente])
+            ->orderBy('data_ricorrenza')
             ->get();
+
+        $ricorrenzeScadute    = $ricorrenzeInSospeso->filter(fn($r) => $r->data_ricorrenza && Carbon::parse($r->data_ricorrenza)->lt($meseCorrente));
+        $ricorrenzeQuestoMese = $ricorrenzeInSospeso->filter(fn($r) => $r->data_ricorrenza && Carbon::parse($r->data_ricorrenza)->between($meseCorrente, $fineCorrente));
+        $ricorrenzeFuture     = $ricorrenzeInSospeso->filter(fn($r) => $r->data_ricorrenza && Carbon::parse($r->data_ricorrenza)->gt($fineCorrente));
 
         // --- Totali rapidi ---
         $totaleClienti = Cliente::whereNull('deleted_at')->count();
@@ -77,6 +84,8 @@ class ChatbotService
         $lines[] = "=== STATISTICHE GENERALI ===";
         $lines[] = "- Clienti totali: {$totaleClienti}";
         $lines[] = "- Task completati totali: {$totaleTaskCompletati}";
+        $totaleInSospeso = $pagamentiInSospeso->sum('importo') + $ricorrenzeInSospeso->sum(fn($r) => $r->pagamento ? $r->pagamento->importo : 0);
+        $lines[] = "- Totale da incassare (tutti i periodi): €" . number_format((float)$totaleInSospeso, 2, ',', '.');
         $lines[] = "";
 
         // Tasks oggi
@@ -133,31 +142,93 @@ class ChatbotService
         }
         $lines[] = "";
 
-        // Pagamenti oneshot in sospeso questo mese
-        $totalePagamentiMese = $pagamentiSospeseMese->sum('importo');
-        $lines[] = "=== PAGAMENTI UNICI IN SOSPESO QUESTO MESE (" . $pagamentiSospeseMese->count() . " | Totale: €" . number_format((float)$totalePagamentiMese, 2, ',', '.') . ") ===";
-        if ($pagamentiSospeseMese->isEmpty()) {
-            $lines[] = "Nessun pagamento unico in sospeso questo mese.";
+        // Pagamenti oneshot scaduti (mesi precedenti)
+        $totScaduti = $pagamentiScaduti->sum('importo');
+        $lines[] = "=== PAGAMENTI UNICI SCADUTI NON PAGATI (" . $pagamentiScaduti->count() . " | €" . number_format((float)$totScaduti, 2, ',', '.') . ") ===";
+        if ($pagamentiScaduti->isEmpty()) {
+            $lines[] = "Nessun pagamento unico scaduto.";
         } else {
-            foreach ($pagamentiSospeseMese as $p) {
+            foreach ($pagamentiScaduti as $p) {
                 $scadenza = $p->data_scadenza ? $p->data_scadenza->format('d/m/Y') : 'N/D';
-                $cliente = $p->cliente ? $p->cliente->nome : 'N/D';
-                $importo = number_format((float)$p->importo, 2, ',', '.');
-                $lines[] = "- €{$importo} da {$cliente} per \"{$p->tipo_lavoro}\" | Scadenza: {$scadenza}";
+                $cliente  = $p->cliente ? $p->cliente->nome : 'N/D';
+                $importo  = number_format((float)$p->importo, 2, ',', '.');
+                $lines[]  = "- €{$importo} da {$cliente} per \"{$p->tipo_lavoro}\" | Scaduto il {$scadenza}";
             }
         }
         $lines[] = "";
 
-        // Ricorrenze periodiche in sospeso questo mese
-        $totaleRicorrenzeMese = $ricorrenzeSospeseMese->sum(fn($r) => $r->pagamento ? $r->pagamento->importo : 0);
-        $lines[] = "=== PAGAMENTI PERIODICI IN SOSPESO QUESTO MESE (" . $ricorrenzeSospeseMese->count() . " | Totale: €" . number_format((float)$totaleRicorrenzeMese, 2, ',', '.') . ") ===";
-        if ($ricorrenzeSospeseMese->isEmpty()) {
+        // Pagamenti oneshot questo mese
+        $totQuestoMese = $pagamentiQuestoMese->sum('importo');
+        $lines[] = "=== PAGAMENTI UNICI IN SOSPESO QUESTO MESE (" . $pagamentiQuestoMese->count() . " | €" . number_format((float)$totQuestoMese, 2, ',', '.') . ") ===";
+        if ($pagamentiQuestoMese->isEmpty()) {
+            $lines[] = "Nessun pagamento unico in sospeso questo mese.";
+        } else {
+            foreach ($pagamentiQuestoMese as $p) {
+                $scadenza = $p->data_scadenza ? $p->data_scadenza->format('d/m/Y') : 'N/D';
+                $cliente  = $p->cliente ? $p->cliente->nome : 'N/D';
+                $importo  = number_format((float)$p->importo, 2, ',', '.');
+                $lines[]  = "- €{$importo} da {$cliente} per \"{$p->tipo_lavoro}\" | Scadenza: {$scadenza}";
+            }
+        }
+        $lines[] = "";
+
+        // Pagamenti oneshot futuri
+        $totFuturi = $pagamentiFuturi->sum('importo');
+        $lines[] = "=== PAGAMENTI UNICI IN SOSPESO PROSSIMI MESI (" . $pagamentiFuturi->count() . " | €" . number_format((float)$totFuturi, 2, ',', '.') . ") ===";
+        if ($pagamentiFuturi->isEmpty()) {
+            $lines[] = "Nessun pagamento unico futuro in sospeso.";
+        } else {
+            foreach ($pagamentiFuturi->take(15) as $p) {
+                $scadenza = $p->data_scadenza ? $p->data_scadenza->format('d/m/Y') : 'N/D';
+                $cliente  = $p->cliente ? $p->cliente->nome : 'N/D';
+                $importo  = number_format((float)$p->importo, 2, ',', '.');
+                $lines[]  = "- €{$importo} da {$cliente} per \"{$p->tipo_lavoro}\" | Scadenza: {$scadenza}";
+            }
+        }
+        $lines[] = "";
+
+        // Ricorrenze periodiche scadute
+        $totRicScadute = $ricorrenzeScadute->sum(fn($r) => $r->pagamento ? $r->pagamento->importo : 0);
+        $lines[] = "=== RICORRENZE PERIODICHE SCADUTE NON PAGATE (" . $ricorrenzeScadute->count() . " | €" . number_format((float)$totRicScadute, 2, ',', '.') . ") ===";
+        if ($ricorrenzeScadute->isEmpty()) {
+            $lines[] = "Nessuna ricorrenza periodica scaduta.";
+        } else {
+            foreach ($ricorrenzeScadute as $r) {
+                $data    = $r->data_ricorrenza ? Carbon::parse($r->data_ricorrenza)->format('d/m/Y') : 'N/D';
+                $cliente = $r->pagamento && $r->pagamento->cliente ? $r->pagamento->cliente->nome : 'N/D';
+                $tipo    = $r->pagamento ? $r->pagamento->tipo_lavoro : 'N/D';
+                $importo = $r->pagamento ? number_format((float)$r->pagamento->importo, 2, ',', '.') : 'N/D';
+                $lines[] = "- €{$importo} da {$cliente} per \"{$tipo}\" | Scaduta il {$data}";
+            }
+        }
+        $lines[] = "";
+
+        // Ricorrenze periodiche questo mese
+        $totRicMese = $ricorrenzeQuestoMese->sum(fn($r) => $r->pagamento ? $r->pagamento->importo : 0);
+        $lines[] = "=== RICORRENZE PERIODICHE IN SOSPESO QUESTO MESE (" . $ricorrenzeQuestoMese->count() . " | €" . number_format((float)$totRicMese, 2, ',', '.') . ") ===";
+        if ($ricorrenzeQuestoMese->isEmpty()) {
             $lines[] = "Nessuna ricorrenza periodica in sospeso questo mese.";
         } else {
-            foreach ($ricorrenzeSospeseMese as $r) {
-                $data = $r->data_ricorrenza ? Carbon::parse($r->data_ricorrenza)->format('d/m/Y') : 'N/D';
+            foreach ($ricorrenzeQuestoMese as $r) {
+                $data    = $r->data_ricorrenza ? Carbon::parse($r->data_ricorrenza)->format('d/m/Y') : 'N/D';
                 $cliente = $r->pagamento && $r->pagamento->cliente ? $r->pagamento->cliente->nome : 'N/D';
-                $tipo = $r->pagamento ? $r->pagamento->tipo_lavoro : 'N/D';
+                $tipo    = $r->pagamento ? $r->pagamento->tipo_lavoro : 'N/D';
+                $importo = $r->pagamento ? number_format((float)$r->pagamento->importo, 2, ',', '.') : 'N/D';
+                $lines[] = "- €{$importo} da {$cliente} per \"{$tipo}\" | Data ricorrenza: {$data}";
+            }
+        }
+        $lines[] = "";
+
+        // Ricorrenze periodiche future (max 15)
+        $totRicFuture = $ricorrenzeFuture->sum(fn($r) => $r->pagamento ? $r->pagamento->importo : 0);
+        $lines[] = "=== RICORRENZE PERIODICHE IN SOSPESO PROSSIMI MESI (" . $ricorrenzeFuture->count() . " | €" . number_format((float)$totRicFuture, 2, ',', '.') . ") ===";
+        if ($ricorrenzeFuture->isEmpty()) {
+            $lines[] = "Nessuna ricorrenza periodica futura in sospeso.";
+        } else {
+            foreach ($ricorrenzeFuture->take(15) as $r) {
+                $data    = $r->data_ricorrenza ? Carbon::parse($r->data_ricorrenza)->format('d/m/Y') : 'N/D';
+                $cliente = $r->pagamento && $r->pagamento->cliente ? $r->pagamento->cliente->nome : 'N/D';
+                $tipo    = $r->pagamento ? $r->pagamento->tipo_lavoro : 'N/D';
                 $importo = $r->pagamento ? number_format((float)$r->pagamento->importo, 2, ',', '.') : 'N/D';
                 $lines[] = "- €{$importo} da {$cliente} per \"{$tipo}\" | Data ricorrenza: {$data}";
             }
