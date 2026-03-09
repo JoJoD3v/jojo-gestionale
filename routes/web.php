@@ -9,6 +9,7 @@ use App\Http\Controllers\PagamentoUnicoController;
 use App\Http\Controllers\PagamentoPeriodicoController;
 use App\Http\Controllers\CalendarioController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\ChatbotController;
 use Illuminate\Support\Facades\Route;
 
 // Redirect root to dashboard
@@ -60,6 +61,11 @@ Route::middleware('auth')->group(function () {
     // Tasks
     Route::resource('tasks', TaskController::class)->parameters(['tasks' => 'task']);
     Route::post('tasks/{task}/completa', [TaskController::class, 'completa'])->name('tasks.completa');
+
+    // Chatbot
+    Route::get('chatbot', [ChatbotController::class, 'index'])->name('chatbot.index');
+    Route::post('chatbot/ask', [ChatbotController::class, 'ask'])->name('chatbot.ask')
+        ->middleware('throttle:15,1');
 });
 
 require __DIR__.'/auth.php';
