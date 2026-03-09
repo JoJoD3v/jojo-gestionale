@@ -50,9 +50,8 @@ class ChatbotService
             ->orderBy('data_lavoro')
             ->get();
 
-        // --- Tutti i pagamenti oneshot in sospeso (qualunque data) ---
+        // --- Tutti i pagamenti in sospeso (oneshot E periodico) ---
         $pagamentiInSospeso = Pagamento::with('cliente')
-            ->where('cadenza', 'oneshot')
             ->where('stato', 'in_sospeso')
             ->orderBy('data_scadenza')
             ->get();
@@ -61,7 +60,7 @@ class ChatbotService
         $pagamentiQuestoMese = $pagamentiInSospeso->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->between($meseCorrente, $fineCorrente));
         $pagamentiFuturi     = $pagamentiInSospeso->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->gt($fineCorrente));
 
-        // --- Tutte le ricorrenze periodiche in sospeso (qualunque data) ---
+        // --- Ricorrenze periodiche in sospeso (qualunque data) ---
         $ricorrenzeInSospeso = PagamentoRicorrenza::with('pagamento.cliente')
             ->where('stato', 'in_sospeso')
             ->orderBy('data_ricorrenza')
@@ -71,8 +70,11 @@ class ChatbotService
         $ricorrenzeQuestoMese = $ricorrenzeInSospeso->filter(fn($r) => $r->data_ricorrenza && Carbon::parse($r->data_ricorrenza)->between($meseCorrente, $fineCorrente));
         $ricorrenzeFuture     = $ricorrenzeInSospeso->filter(fn($r) => $r->data_ricorrenza && Carbon::parse($r->data_ricorrenza)->gt($fineCorrente));
 
+        // --- Tutti i clienti con dati di contatto ---
+        $clienti = Cliente::orderBy('nome')->get();
+
         // --- Totali rapidi ---
-        $totaleClienti = Cliente::whereNull('deleted_at')->count();
+        $totaleClienti = $clienti->count();
         $totaleTaskCompletati = Task::where('status', 'completato')->whereNull('deleted_at')->count();
 
         // Costruzione del testo di contesto
@@ -142,47 +144,50 @@ class ChatbotService
         }
         $lines[] = "";
 
-        // Pagamenti oneshot scaduti (mesi precedenti)
+        // Pagamenti scaduti (mesi precedenti)
         $totScaduti = $pagamentiScaduti->sum('importo');
-        $lines[] = "=== PAGAMENTI UNICI SCADUTI NON PAGATI (" . $pagamentiScaduti->count() . " | €" . number_format((float)$totScaduti, 2, ',', '.') . ") ===";
+        $lines[] = "=== PAGAMENTI SCADUTI NON PAGATI (" . $pagamentiScaduti->count() . " | €" . number_format((float)$totScaduti, 2, ',', '.') . ") ===";
         if ($pagamentiScaduti->isEmpty()) {
-            $lines[] = "Nessun pagamento unico scaduto.";
+            $lines[] = "Nessun pagamento scaduto.";
         } else {
             foreach ($pagamentiScaduti as $p) {
                 $scadenza = $p->data_scadenza ? $p->data_scadenza->format('d/m/Y') : 'N/D';
                 $cliente  = $p->cliente ? $p->cliente->nome : 'N/D';
                 $importo  = number_format((float)$p->importo, 2, ',', '.');
-                $lines[]  = "- €{$importo} da {$cliente} per \"{$p->tipo_lavoro}\" | Scaduto il {$scadenza}";
+                $cadenza  = $p->cadenza === 'periodico' ? "periodico/{$p->frequenza}" : 'oneshot';
+                $lines[]  = "- €{$importo} da {$cliente} per \"{$p->tipo_lavoro}\" [{$cadenza}] | Scaduto il {$scadenza}";
             }
         }
         $lines[] = "";
 
-        // Pagamenti oneshot questo mese
+        // Pagamenti questo mese
         $totQuestoMese = $pagamentiQuestoMese->sum('importo');
-        $lines[] = "=== PAGAMENTI UNICI IN SOSPESO QUESTO MESE (" . $pagamentiQuestoMese->count() . " | €" . number_format((float)$totQuestoMese, 2, ',', '.') . ") ===";
+        $lines[] = "=== PAGAMENTI IN SOSPESO QUESTO MESE (" . $pagamentiQuestoMese->count() . " | €" . number_format((float)$totQuestoMese, 2, ',', '.') . ") ===";
         if ($pagamentiQuestoMese->isEmpty()) {
-            $lines[] = "Nessun pagamento unico in sospeso questo mese.";
+            $lines[] = "Nessun pagamento in sospeso questo mese.";
         } else {
             foreach ($pagamentiQuestoMese as $p) {
                 $scadenza = $p->data_scadenza ? $p->data_scadenza->format('d/m/Y') : 'N/D';
                 $cliente  = $p->cliente ? $p->cliente->nome : 'N/D';
                 $importo  = number_format((float)$p->importo, 2, ',', '.');
-                $lines[]  = "- €{$importo} da {$cliente} per \"{$p->tipo_lavoro}\" | Scadenza: {$scadenza}";
+                $cadenza  = $p->cadenza === 'periodico' ? "periodico/{$p->frequenza}" : 'oneshot';
+                $lines[]  = "- €{$importo} da {$cliente} per \"{$p->tipo_lavoro}\" [{$cadenza}] | Scadenza: {$scadenza}";
             }
         }
         $lines[] = "";
 
-        // Pagamenti oneshot futuri
+        // Pagamenti futuri
         $totFuturi = $pagamentiFuturi->sum('importo');
-        $lines[] = "=== PAGAMENTI UNICI IN SOSPESO PROSSIMI MESI (" . $pagamentiFuturi->count() . " | €" . number_format((float)$totFuturi, 2, ',', '.') . ") ===";
+        $lines[] = "=== PAGAMENTI IN SOSPESO PROSSIMI MESI (" . $pagamentiFuturi->count() . " | €" . number_format((float)$totFuturi, 2, ',', '.') . ") ===";
         if ($pagamentiFuturi->isEmpty()) {
-            $lines[] = "Nessun pagamento unico futuro in sospeso.";
+            $lines[] = "Nessun pagamento futuro in sospeso.";
         } else {
             foreach ($pagamentiFuturi->take(15) as $p) {
                 $scadenza = $p->data_scadenza ? $p->data_scadenza->format('d/m/Y') : 'N/D';
                 $cliente  = $p->cliente ? $p->cliente->nome : 'N/D';
                 $importo  = number_format((float)$p->importo, 2, ',', '.');
-                $lines[]  = "- €{$importo} da {$cliente} per \"{$p->tipo_lavoro}\" | Scadenza: {$scadenza}";
+                $cadenza  = $p->cadenza === 'periodico' ? "periodico/{$p->frequenza}" : 'oneshot';
+                $lines[]  = "- €{$importo} da {$cliente} per \"{$p->tipo_lavoro}\" [{$cadenza}] | Scadenza: {$scadenza}";
             }
         }
         $lines[] = "";
@@ -231,6 +236,21 @@ class ChatbotService
                 $tipo    = $r->pagamento ? $r->pagamento->tipo_lavoro : 'N/D';
                 $importo = $r->pagamento ? number_format((float)$r->pagamento->importo, 2, ',', '.') : 'N/D';
                 $lines[] = "- €{$importo} da {$cliente} per \"{$tipo}\" | Data ricorrenza: {$data}";
+            }
+        }
+        $lines[] = "";
+
+        // --- Clienti ---
+        $lines[] = "=== RUBRICA CLIENTI (" . $clienti->count() . ") ===";
+        if ($clienti->isEmpty()) {
+            $lines[] = "Nessun cliente presente.";
+        } else {
+            foreach ($clienti as $c) {
+                $telefono   = $c->telefono    ?: 'non specificato';
+                $email      = $c->email       ?: 'non specificata';
+                $piva       = $c->partita_iva ?: 'non specificata';
+                $note       = $c->note        ? " | Note: {$c->note}" : '';
+                $lines[] = "- {$c->nome} | Tel: {$telefono} | Email: {$email} | P.IVA/CF: {$piva}{$note}";
             }
         }
 
