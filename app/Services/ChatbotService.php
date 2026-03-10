@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Task;
 use App\Models\Lavoro;
 use App\Models\Pagamento;
-use App\Models\PagamentoRicorrenza;
 use App\Models\Cliente;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -50,26 +49,54 @@ class ChatbotService
             ->orderBy('data_lavoro')
             ->get();
 
-        // --- Solo pagamenti oneshot in sospeso (i periodici sono gestiti tramite ricorrenze) ---
-        $pagamentiInSospeso = Pagamento::with('cliente')
+        // --- Pagamenti oneshot in sospeso ---
+        $pagamentiOneshot = Pagamento::with('cliente')
             ->where('stato', 'in_sospeso')
             ->where('cadenza', 'oneshot')
             ->orderBy('data_scadenza')
             ->get();
 
-        $pagamentiScaduti    = $pagamentiInSospeso->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->lt($meseCorrente));
-        $pagamentiQuestoMese = $pagamentiInSospeso->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->between($meseCorrente, $fineCorrente));
-        $pagamentiFuturi     = $pagamentiInSospeso->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->gt($fineCorrente));
+        $pagamentiScaduti    = $pagamentiOneshot->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->lt($meseCorrente));
+        $pagamentiQuestoMese = $pagamentiOneshot->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->between($meseCorrente, $fineCorrente));
+        $pagamentiFuturi     = $pagamentiOneshot->filter(fn($p) => $p->data_scadenza && $p->data_scadenza->gt($fineCorrente));
 
-        // --- Ricorrenze periodiche in sospeso (qualunque data) ---
-        $ricorrenzeInSospeso = PagamentoRicorrenza::with('pagamento.cliente')
+        // --- Pagamenti periodici: calcola occorrenze in PHP (la tabella ricorrenze non viene usata) ---
+        $pagamentiPeriodici = Pagamento::with('cliente')
             ->where('stato', 'in_sospeso')
-            ->orderBy('data_ricorrenza')
+            ->where('cadenza', 'periodico')
             ->get();
 
-        $ricorrenzeScadute    = $ricorrenzeInSospeso->filter(fn($r) => $r->data_ricorrenza && Carbon::parse($r->data_ricorrenza)->lt($meseCorrente));
-        $ricorrenzeQuestoMese = $ricorrenzeInSospeso->filter(fn($r) => $r->data_ricorrenza && Carbon::parse($r->data_ricorrenza)->between($meseCorrente, $fineCorrente));
-        $ricorrenzeFuture     = $ricorrenzeInSospeso->filter(fn($r) => $r->data_ricorrenza && Carbon::parse($r->data_ricorrenza)->gt($fineCorrente));
+        // Per ogni pagamento periodico calcola la prossima occorrenza non pagata
+        $ricorrenzeFlat = collect();
+        foreach ($pagamentiPeriodici as $p) {
+            if (!$p->data_scadenza || !$p->frequenza) continue;
+            $mesiStep = match ($p->frequenza) {
+                'mensile'     => 1,
+                'trimestrale' => 3,
+                'annuale'     => 12,
+                default       => null,
+            };
+            if (!$mesiStep) continue;
+
+            // Genera tutte le occorrenze dalla data_scadenza fino a 12 mesi nel futuro
+            $dataOccorrenza = $p->data_scadenza->copy();
+            $limite = $fineCorrente->copy()->addMonths(12);
+            while ($dataOccorrenza->lte($limite)) {
+                $ricorrenzeFlat->push([
+                    'data'     => $dataOccorrenza->copy(),
+                    'cliente'  => $p->cliente ? $p->cliente->nome : 'N/D',
+                    'tipo'     => $p->tipo_lavoro,
+                    'importo'  => $p->importo,
+                    'frequenza'=> $p->frequenza,
+                ]);
+                $dataOccorrenza->addMonths($mesiStep);
+            }
+        }
+        $ricorrenzeFlat = $ricorrenzeFlat->sortBy('data');
+
+        $ricorrenzeScadute    = $ricorrenzeFlat->filter(fn($r) => $r['data']->lt($meseCorrente));
+        $ricorrenzeQuestoMese = $ricorrenzeFlat->filter(fn($r) => $r['data']->between($meseCorrente, $fineCorrente));
+        $ricorrenzeFuture     = $ricorrenzeFlat->filter(fn($r) => $r['data']->gt($fineCorrente));
 
         // --- Tutti i clienti con dati di contatto ---
         $clienti = Cliente::orderBy('nome')->get();
@@ -87,8 +114,8 @@ class ChatbotService
         $lines[] = "=== STATISTICHE GENERALI ===";
         $lines[] = "- Clienti totali: {$totaleClienti}";
         $lines[] = "- Task completati totali: {$totaleTaskCompletati}";
-        $totaleInSospeso = $pagamentiInSospeso->sum('importo')
-            + $ricorrenzeInSospeso->sum(fn($r) => $r->pagamento?->importo ?? 0);
+        $totaleInSospeso = $pagamentiOneshot->sum('importo')
+            + $ricorrenzeFlat->sum(fn($r) => $r['importo']);
         $lines[] = "- Totale da incassare (tutti i periodi): €" . number_format((float)$totaleInSospeso, 2, ',', '.');
         $lines[] = "";
 
@@ -195,49 +222,43 @@ class ChatbotService
         $lines[] = "";
 
         // Ricorrenze periodiche scadute
-        $totRicScadute = $ricorrenzeScadute->sum(fn($r) => $r->pagamento ? $r->pagamento->importo : 0);
+        $totRicScadute = $ricorrenzeScadute->sum(fn($r) => $r['importo']);
         $lines[] = "=== RICORRENZE PERIODICHE SCADUTE NON PAGATE (" . $ricorrenzeScadute->count() . " | €" . number_format((float)$totRicScadute, 2, ',', '.') . ") ===";
         if ($ricorrenzeScadute->isEmpty()) {
             $lines[] = "Nessuna ricorrenza periodica scaduta.";
         } else {
             foreach ($ricorrenzeScadute as $r) {
-                $data    = $r->data_ricorrenza ? Carbon::parse($r->data_ricorrenza)->format('d/m/Y') : 'N/D';
-                $cliente = $r->pagamento && $r->pagamento->cliente ? $r->pagamento->cliente->nome : 'N/D';
-                $tipo    = $r->pagamento ? $r->pagamento->tipo_lavoro : 'N/D';
-                $importo = $r->pagamento ? number_format((float)$r->pagamento->importo, 2, ',', '.') : 'N/D';
-                $lines[] = "- €{$importo} da {$cliente} per \"{$tipo}\" | Scaduta il {$data}";
+                $data    = $r['data']->format('d/m/Y');
+                $importo = number_format((float)$r['importo'], 2, ',', '.');
+                $lines[] = "- €{$importo} da {$r['cliente']} per \"{$r['tipo']}\" [{$r['frequenza']}] | Scaduta il {$data}";
             }
         }
         $lines[] = "";
 
         // Ricorrenze periodiche questo mese
-        $totRicMese = $ricorrenzeQuestoMese->sum(fn($r) => $r->pagamento ? $r->pagamento->importo : 0);
+        $totRicMese = $ricorrenzeQuestoMese->sum(fn($r) => $r['importo']);
         $lines[] = "=== RICORRENZE PERIODICHE IN SOSPESO QUESTO MESE (" . $ricorrenzeQuestoMese->count() . " | €" . number_format((float)$totRicMese, 2, ',', '.') . ") ===";
         if ($ricorrenzeQuestoMese->isEmpty()) {
             $lines[] = "Nessuna ricorrenza periodica in sospeso questo mese.";
         } else {
             foreach ($ricorrenzeQuestoMese as $r) {
-                $data    = $r->data_ricorrenza ? Carbon::parse($r->data_ricorrenza)->format('d/m/Y') : 'N/D';
-                $cliente = $r->pagamento && $r->pagamento->cliente ? $r->pagamento->cliente->nome : 'N/D';
-                $tipo    = $r->pagamento ? $r->pagamento->tipo_lavoro : 'N/D';
-                $importo = $r->pagamento ? number_format((float)$r->pagamento->importo, 2, ',', '.') : 'N/D';
-                $lines[] = "- €{$importo} da {$cliente} per \"{$tipo}\" | Data ricorrenza: {$data}";
+                $data    = $r['data']->format('d/m/Y');
+                $importo = number_format((float)$r['importo'], 2, ',', '.');
+                $lines[] = "- €{$importo} da {$r['cliente']} per \"{$r['tipo']}\" [{$r['frequenza']}] | Data ricorrenza: {$data}";
             }
         }
         $lines[] = "";
 
         // Ricorrenze periodiche future (max 15)
-        $totRicFuture = $ricorrenzeFuture->sum(fn($r) => $r->pagamento ? $r->pagamento->importo : 0);
+        $totRicFuture = $ricorrenzeFuture->sum(fn($r) => $r['importo']);
         $lines[] = "=== RICORRENZE PERIODICHE IN SOSPESO PROSSIMI MESI (" . $ricorrenzeFuture->count() . " | €" . number_format((float)$totRicFuture, 2, ',', '.') . ") ===";
         if ($ricorrenzeFuture->isEmpty()) {
             $lines[] = "Nessuna ricorrenza periodica futura in sospeso.";
         } else {
             foreach ($ricorrenzeFuture->take(15) as $r) {
-                $data    = $r->data_ricorrenza ? Carbon::parse($r->data_ricorrenza)->format('d/m/Y') : 'N/D';
-                $cliente = $r->pagamento && $r->pagamento->cliente ? $r->pagamento->cliente->nome : 'N/D';
-                $tipo    = $r->pagamento ? $r->pagamento->tipo_lavoro : 'N/D';
-                $importo = $r->pagamento ? number_format((float)$r->pagamento->importo, 2, ',', '.') : 'N/D';
-                $lines[] = "- €{$importo} da {$cliente} per \"{$tipo}\" | Data ricorrenza: {$data}";
+                $data    = $r['data']->format('d/m/Y');
+                $importo = number_format((float)$r['importo'], 2, ',', '.');
+                $lines[] = "- €{$importo} da {$r['cliente']} per \"{$r['tipo']}\" [{$r['frequenza']}] | Data ricorrenza: {$data}";
             }
         }
         $lines[] = "";
