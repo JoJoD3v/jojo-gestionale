@@ -50,9 +50,10 @@ class ChatbotService
             ->orderBy('data_lavoro')
             ->get();
 
-        // --- Tutti i pagamenti in sospeso (oneshot E periodico) ---
+        // --- Solo pagamenti oneshot in sospeso (i periodici sono gestiti tramite ricorrenze) ---
         $pagamentiInSospeso = Pagamento::with('cliente')
             ->where('stato', 'in_sospeso')
+            ->where('cadenza', 'oneshot')
             ->orderBy('data_scadenza')
             ->get();
 
@@ -86,7 +87,8 @@ class ChatbotService
         $lines[] = "=== STATISTICHE GENERALI ===";
         $lines[] = "- Clienti totali: {$totaleClienti}";
         $lines[] = "- Task completati totali: {$totaleTaskCompletati}";
-        $totaleInSospeso = $pagamentiInSospeso->sum('importo') + $ricorrenzeInSospeso->sum(fn($r) => $r->pagamento ? $r->pagamento->importo : 0);
+        $totaleInSospeso = $pagamentiInSospeso->sum('importo')
+            + $ricorrenzeInSospeso->sum(fn($r) => $r->pagamento?->importo ?? 0);
         $lines[] = "- Totale da incassare (tutti i periodi): €" . number_format((float)$totaleInSospeso, 2, ',', '.');
         $lines[] = "";
 
@@ -306,7 +308,7 @@ EOT;
             ->post($this->apiUrl, [
                 'model'       => $this->model,
                 'messages'    => $messaggi,
-                'max_tokens'  => 800,
+                'max_tokens'  => 1500,
                 'temperature' => 0.4,
             ]);
 
